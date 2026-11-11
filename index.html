@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#241a38">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Spot Champ — a find-them-in-the-crowd hidden-object game. Find Champ, a woodchuck and a very lost leaf peeper in busy, lively crowds.">
+<title>Spot Champ</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- fonts load without blocking the game: a slow font server must never stall start-up -->
+<link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <!-- in-game HUD -->
+  <div id="hud" class="ui" hidden>
+    <div class="hl"><div id="hudTheme">Street Fest</div><div id="hudCount">0 / 8 found</div></div>
+    <div id="timer">0:00</div>
+    <button id="btnPause" class="round" aria-label="Pause"><i></i><i></i></button>
+  </div>
+  <div id="combo" class="ui" hidden><span id="comboText">COMBO</span><i id="comboBar"></i></div>
+  <div id="toast" class="ui"></div>
+  <div id="callout" class="ui" hidden><canvas id="calloutIcon" width="112" height="112"></canvas><div><b id="calloutName"></b><span id="calloutBlurb"></span></div></div>
+  <button id="btnFit" class="round side ui" aria-label="Zoom out to see everything" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button id="btnHint" class="round side ui" aria-label="Hint" hidden><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15.2 15.2L20.5 20.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span id="hintCd"></span></button>
+  <div id="tray" class="ui" hidden></div>
+
+  <!-- title -->
+  <section id="title" class="screen ui">
+    <div class="logo">
+      <div class="l1">SPOT</div>
+      <div class="l2">CH<span class="peek"><canvas id="logoChamp" width="160" height="160"></canvas>A</span>MP</div>
+    </div>
+    <div class="tag">a find-them-in-the-crowd hidden-object game</div>
+    <div class="grow"></div>
+    <div class="panel">
+      <button id="btnDaily" class="big"><span>DAILY SCENE</span><small id="dailyInfo">today</small></button>
+      <div class="row"><button id="btnFree" class="mid">FREE PLAY</button><button id="btnRush" class="mid">RUSH <small id="rushBest">90 seconds</small></button></div>
+      <button id="btnAlbum" class="mid">CHAMP ALBUM <small id="albumCount"></small></button>
+      <div class="rank" id="rankBox"><b id="rankName">Rookie Spotter</b><span id="rankXp"></span><i><em id="rankBar"></em></i></div>
+      <div class="toggles" id="togglesTitle"></div>
+    </div>
+  </section>
+
+  <!-- free play picker -->
+  <section id="picker" class="screen ui" hidden>
+    <div class="card wide">
+      <h2>FREE PLAY</h2>
+      <div class="lab">Scene</div>
+      <div class="themes" id="themes"></div>
+      <div class="lab">Crowd</div>
+      <div class="chips" id="diffs"></div>
+      <button id="btnGo" class="big">PLAY</button>
+      <button id="btnBack" class="mid">Back</button>
+    </div>
+  </section>
+
+  <!-- pause -->
+  <section id="pause" class="screen ui dim" hidden>
+    <div class="card">
+      <h2>PAUSED</h2>
+      <div class="pinfo" id="pauseInfo"></div>
+      <button id="btnResume" class="big">RESUME</button>
+      <div class="row">
+        <button id="btnRestart" class="mid">New scene</button>
+        <button id="btnQuit" class="mid">Menu</button>
+      </div>
+      <div class="toggles" id="togglesPause"></div>
+    </div>
+  </section>
+
+  <!-- scene cleared -->
+  <section id="done" class="screen ui" hidden>
+    <div class="card">
+      <h2 id="doneHead">SCENE CLEARED!</h2>
+      <div class="stars" id="doneStars"></div>
+      <div class="bigtime" id="doneTime">2:14</div>
+      <div class="newbest" id="doneBest"></div>
+      <div class="stats" id="doneStats"></div>
+      <div class="extra" id="doneExtra"></div>
+      <button id="btnNext" class="big">NEXT SCENE</button>
+      <div class="row">
+        <button id="btnLook" class="mid">Explore</button>
+        <button id="btnMenu" class="mid">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Champ Album: every hiding spot and every find you've collected -->
+  <section id="album" class="screen ui dim" hidden>
+    <div class="card wide albumcard">
+      <div class="ahead"><h2>CHAMP ALBUM</h2><button id="btnAlbumX" class="round" aria-label="Close album">&#x2715;</button></div>
+      <div class="pinfo" id="albumInfo"></div>
+      <div class="lab">Where you've spotted Champ</div>
+      <div class="stickers" id="stickSpots"></div>
+      <div class="lab">Things you've found</div>
+      <div class="stickers" id="stickItems"></div>
+      <button id="btnAlbumBack" class="mid">Back</button>
+    </div>
+  </section>
+
+  <div id="coach" class="ui" hidden>
+    <div class="hand"><i class="f1"></i><i class="f2"></i></div>
+    <p>Pinch to zoom &middot; drag to look around<br><b>Tap</b> each thing on the list when you spot it</p>
+  </div>
+  <div id="veil" class="ui"><div class="spin"></div><p id="veilText">Gathering the crowd&hellip;</p></div>
+</div>
+<div id="probe"></div>
+<script>window.addEventListener('error', function (e) { if (/spot|js\//i.test(e.filename || '') || !window.SC || !window.SC.SCENE) { var t = document.getElementById('veilText'); if (t && !window.__booted) { t.innerHTML = 'Something didn\u2019t load. <u>Tap to reload</u>'; document.getElementById('veil').style.pointerEvents = 'auto'; document.getElementById('veil').onclick = function () { location.reload(); }; } } }, true);</script>
+<script src="js/util.js"></script>
+<script src="js/art.js"></script>
+<script src="js/props.js"></script>
+<script src="js/themes.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
