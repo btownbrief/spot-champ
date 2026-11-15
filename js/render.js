@@ -19,6 +19,20 @@
   let baseBg = null;           // whole backdrop at low res
   let glow = null;
   R.stats = { built: 0, tilesBuilt: 0, drawn: 0, lastMs: 0, buildMs: 0, pending: 0 };
+  // Champ ducking: up 2.6 s, 0.3 s down, 1.2 s low, 0.3 s up. Returns 0 (up) .. DUCK_MAX (as low as he goes).
+  // He never vanishes: at his lowest his eyes and antennae still show over the edge (see R.sinkDy).
+  const DUCK = [2.6, 0.3, 1.2, 0.3], DUCK_T = 4.4, DUCK_MAX = 0.65;
+  R.sink = function (e, t) {
+    if (!e.duck) return 0;
+    let u = t - e.duck.t0; if (u < 0) return 0; u %= DUCK_T;
+    const ease = (v) => v * v * (3 - 2 * v);
+    if (u < DUCK[0]) return 0; u -= DUCK[0];
+    if (u < DUCK[1]) return DUCK_MAX * ease(u / DUCK[1]); u -= DUCK[1];
+    if (u < DUCK[2]) return DUCK_MAX; u -= DUCK[2];
+    return DUCK_MAX * (1 - ease(u / DUCK[3]));
+  };
+  // how far down (local units) he has slipped: at DUCK_MAX the peek pose drops 6.5 units, leaving antennae + eyes
+  R.sinkDy = (e, t) => R.sink(e, t) * (e.spec.pose === 'peek' ? 10 : 48);
 
   function mk(w, h) {
     if (typeof OffscreenCanvas !== 'undefined' && R.useOffscreen) return new OffscreenCanvas(w, h);
@@ -139,7 +153,7 @@
     }
     const vx0 = cam.x - cx / cam.z, vy0 = cam.y - cy / cam.z, vx1 = cam.x + cx / cam.z, vy1 = cam.y + cy / cam.z;
     const ox = (cx - cam.x * cam.z) * dpr, oy = (cy - cam.y * cam.z) * dpr; // device px offset of world origin
-    const want = bucketFor(k), twant = Math.min(want, 3);
+    const want = bucketFor(k * (opts.sharp || 1)), twant = Math.min(want, 3);
     // Chrome/Safari rasterise canvas drawing lazily, so build *time* is not measurable here.
     // Instead each build spends an estimated cost (measured: ~0.12ms + 4ms per megapixel).
     let cost = opts.budget != null ? opts.budget : 5;
@@ -182,6 +196,11 @@
       const f = e.flip ? -1 : 1, s = e.s;
       // entity base transform: world (e.x,e.y) -> device, scaled by s*k, flipped
       let ex = ox + e.x * k, ey = oy + e.y * k;
+      let clipped = false;
+      if (e.duck) { // sink below the spot's edge (clipped there), so he slips behind his prop / under the water
+        const dy = R.sinkDy(e, t);
+        if (dy > 0) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.beginPath(); ctx.rect(0, 0, view.w * dpr, ey + 1.2 * s * k); ctx.clip(); clipped = true; ey += dy * s * k; }
+      }
       let rot = 0, sx = 1, sy = 1;
       if (ba) { ex += ba[0] * s * k * f; ey += ba[1] * s * k; rot = ba[2] * f; sx = ba[3]; sy = ba[4]; }
       if (cel != null) { const hop = Math.sin(Math.PI * Math.min(1, cel * 1.6)) * 16; ey -= hop * s * k; const sq = cel < 0.62 ? 1 + 0.12 * Math.sin(cel / 0.62 * Math.PI * 2) : 1; sy *= sq; sx /= sq; rot += f * 0.25 * Math.sin(cel * Math.PI * 2) * (1 - cel); }
@@ -206,15 +225,17 @@
         ctx.drawImage(use.cv, use.lx, use.ly, use.lw, use.lh);
         drawn++;
       }
+      if (clipped) ctx.restore();
     }
     // night glow
     if (S.night && S.lights.length) {
       ctx.globalCompositeOperation = 'lighter';
       for (const L of S.lights) {
         if (L.x + L.r < vx0 || L.x - L.r > vx1 || L.y + L.r < vy0 || L.y - L.r > vy1) continue;
-        const fl = 0.36 + 0.05 * Math.sin(t * 3 + L.x);
-        ctx.globalAlpha = fl; ctx.setTransform(1, 0, 0, 1, 0, 0);
-        const rr = L.r * k;
+        // lamp posts keep their full glow; other lights are smaller and dimmer; a carried lantern is just a small warm dot
+        const fl = (0.36 + 0.05 * Math.sin(t * 3 + L.x)) * (L.kind === 'lamp' ? 1 : L.kind === 'lantern' ? 1.6 : 0.5);
+        ctx.globalAlpha = Math.min(1, fl); ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const rr = L.r * k * (L.kind === 'lamp' ? 1 : L.kind === 'lantern' ? 0.2 : 0.6);
         ctx.drawImage(glow, ox + L.x * k - rr, oy + L.y * k - rr, rr * 2, rr * 2);
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';

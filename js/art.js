@@ -690,7 +690,7 @@
   const ITEMS = {
     jug: { b: [-9, -19, 9, 2], sh: [{ t: 'r', x0: -6.5, y0: -17, x1: 6.5, y1: 0 }], draw(c, s) {
       shadow(c, 7, 1.8);
-      paint(c, () => { c.moveTo(-6, 0); c.lineTo(-6, -10); c.quadraticCurveTo(-6, -13, -3, -13.5); c.lineTo(-1.5, -14); c.lineTo(-1.5, -16); c.lineTo(1.5, -16); c.lineTo(1.5, -14); c.lineTo(6, -13); c.lineTo(6, 0); c.closePath(); }, '#d98a2b', { k: 0.8, detail: () => { c.fillStyle = '#f7f1e3'; c.fillRect(-6, -9.5, 12, 7); c.fillStyle = '#4caf50'; c.beginPath(); c.moveTo(-6, -2.6); c.quadraticCurveTo(-1, -6.8, 6, -3.5); c.lineTo(6, -2.5); c.lineTo(-6, -2.5); c.fill(); leaf(c, 0.5, -7, 2, '#d64545'); } });
+      paint(c, () => { c.moveTo(-6, 0); c.lineTo(-6, -10); c.quadraticCurveTo(-6, -13, -3, -13.5); c.lineTo(-1.5, -14); c.lineTo(-1.5, -16); c.lineTo(1.5, -16); c.lineTo(1.5, -14); c.lineTo(6, -13); c.lineTo(6, 0); c.closePath(); }, s.col || '#d98a2b', { k: 0.8, detail: () => { c.fillStyle = '#f7f1e3'; c.fillRect(-6, -9.5, 12, 7); c.fillStyle = s.col ? '#4d96ff' : '#4caf50'; c.beginPath(); c.moveTo(-6, -2.6); c.quadraticCurveTo(-1, -6.8, 6, -3.5); c.lineTo(6, -2.5); c.lineTo(-6, -2.5); c.fill(); leaf(c, 0.5, -7, 2, '#d64545'); } });
       c.strokeStyle = OUT; c.lineWidth = 1.6; c.beginPath(); c.moveTo(2, -13.6); c.quadraticCurveTo(6.5, -18, 6, -12.2); c.stroke(); c.strokeStyle = '#f2e3c4'; c.lineWidth = 0.7; c.stroke();
       paint(c, () => rr(c, -2, -18, 4, 2.5, 0.6), '#c0392b', { shade: false, lw: 0.6 });
     } },
@@ -702,7 +702,7 @@
       paint(c, () => ell(c, 7, -8.7, 2.6, 1.2), '#ff8c1a', { shade: false, lw: 0.7 });
       dot(c, 3.8, -10.4, 0.8, '#1d1d24');
     } },
-    mitten: { b: [-8, -13, 8, 2], sh: [{ t: 'e', x: 0, y: -6, rx: 6.5, ry: 6.5 }], draw(c, s) {
+    mitten: { b: [-8, -13, 8, 2], sh: [{ t: 'e', x: 0.5, y: -6.3, rx: 7.2, ry: 7.2 }], draw(c, s) {
       const col = s.col || '#8e5bd6';
       shadow(c, 6, 1.4);
       c.save(); c.rotate(0.3);
@@ -713,7 +713,7 @@
     kite: { b: [-14, -16, 18, 4], sh: [{ t: 'r', x0: -10, y0: -11, x1: 10, y1: 1 }], draw(c, s) {
       shadow(c, 12, 1.8);
       c.save(); c.translate(0, -5); c.scale(1, 0.55); c.rotate(0.5);
-      const P = [[0, -11], [8, 0], [0, 15], [-8, 0]], cols = ['#ff6f61', '#ffd23f', '#4d96ff', '#7bd389'];
+      const P = [[0, -11], [8, 0], [0, 15], [-8, 0]], cols = s.cols || ['#ff6f61', '#ffd23f', '#4d96ff', '#7bd389'];
       for (let i = 0; i < 4; i++) { const a = P[i], b = P[(i + 1) % 4]; c.beginPath(); c.moveTo(0, 0); c.lineTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.closePath(); c.fillStyle = cols[i]; c.fill(); }
       c.beginPath(); c.moveTo(0, -11); c.lineTo(8, 0); c.lineTo(0, 15); c.lineTo(-8, 0); c.closePath(); c.lineWidth = 1.6; c.strokeStyle = OUT; c.stroke();
       c.restore();
@@ -745,17 +745,17 @@
     flamingo: { b: [-10, -34, 11, 2], sh: [{ t: 'e', x: 0, y: -18, rx: 7, ry: 5 }, { t: 'r', x0: 2, y0: -32, x1: 9, y1: -18 }, { t: 'r', x0: -2, y0: -14, x1: 2, y1: 0 }], draw(c, s) {
       shadow(c, 5, 1.2);
       line(c, [-1, 0, -1, -14], 0.9, '#d65a86'); line(c, [1.4, 0, 1.4, -11, 3.6, -13], 0.9, '#d65a86');
-      paint(c, () => { c.moveTo(-8, -18); c.quadraticCurveTo(-5, -24, 4, -21); c.quadraticCurveTo(7, -16, 2, -14); c.quadraticCurveTo(-6, -13, -8, -18); c.closePath(); }, '#ff7eb6', { k: 0.6 });
-      c.beginPath(); c.moveTo(4, -20); c.quadraticCurveTo(9, -26, 5, -30); c.lineWidth = 3.4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = '#ff7eb6'; c.stroke();
-      paint(c, () => circ(c, 6, -30.8, 2.4), '#ff7eb6', { shade: false, lw: 0.8 });
+      paint(c, () => { c.moveTo(-8, -18); c.quadraticCurveTo(-5, -24, 4, -21); c.quadraticCurveTo(7, -16, 2, -14); c.quadraticCurveTo(-6, -13, -8, -18); c.closePath(); }, s.col || '#ff7eb6', { k: 0.6 });
+      c.beginPath(); c.moveTo(4, -20); c.quadraticCurveTo(9, -26, 5, -30); c.lineWidth = 3.4; c.strokeStyle = OUT; c.stroke(); c.lineWidth = 2; c.strokeStyle = s.col || '#ff7eb6'; c.stroke();
+      paint(c, () => circ(c, 6, -30.8, 2.4), s.col || '#ff7eb6', { shade: false, lw: 0.8 });
       paint(c, () => { c.moveTo(7.6, -31.5); c.lineTo(10.6, -29.4); c.lineTo(8, -29.2); c.closePath(); }, '#2b2b33', { shade: false, lw: 0.5 });
       dot(c, 6.4, -31.4, 0.5, '#1d1d24');
     } },
     trophy: { b: [-9, -21, 9, 2], sh: [{ t: 'r', x0: -6, y0: -19, x1: 6, y1: 0 }], draw(c, s) {
       shadow(c, 6, 1.4);
       c.strokeStyle = OUT; c.lineWidth = 2.6; c.beginPath(); c.arc(-5.8, -14, 2.6, Math.PI * 0.5, Math.PI * 1.5); c.moveTo(5.8, -16.6); c.arc(5.8, -14, 2.6, -Math.PI * 0.5, Math.PI * 0.5); c.stroke();
-      c.strokeStyle = '#f5c518'; c.lineWidth = 1.2; c.stroke();
-      paint(c, () => { c.moveTo(-6, -19); c.lineTo(6, -19); c.quadraticCurveTo(6, -9, 1.2, -8); c.lineTo(1.2, -4); c.lineTo(-1.2, -4); c.lineTo(-1.2, -8); c.quadraticCurveTo(-6, -9, -6, -19); c.closePath(); }, '#f5c518', { k: 0.6 });
+      c.strokeStyle = s.col || '#f5c518'; c.lineWidth = 1.2; c.stroke();
+      paint(c, () => { c.moveTo(-6, -19); c.lineTo(6, -19); c.quadraticCurveTo(6, -9, 1.2, -8); c.lineTo(1.2, -4); c.lineTo(-1.2, -4); c.lineTo(-1.2, -8); c.quadraticCurveTo(-6, -9, -6, -19); c.closePath(); }, s.col || '#f5c518', { k: 0.6 });
       paint(c, () => rr(c, -5, -4.5, 10, 4.5, 0.8), '#6e4122', { shade: false, lw: 0.8 });
       dot(c, -2.6, -16, 1, 'rgba(255,255,255,0.8)');
     } },

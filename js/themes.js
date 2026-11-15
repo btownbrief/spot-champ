@@ -12,6 +12,13 @@
   const hit = (rect, x0, y0, x1, y1) => x0 < rect[2] && x1 > rect[0] && y0 < rect[3] && y1 > rect[1];
   function sky(c, rect, y1, top, bot) { if (!hit(rect, 0, 0, W, y1)) return; const g = c.createLinearGradient(0, 0, 0, y1); g.addColorStop(0, top); g.addColorStop(1, bot); c.fillStyle = g; c.fillRect(rect[0], 0, rect[2] - rect[0], y1); }
   function clouds(c, rect, list, col) { c.fillStyle = col || 'rgba(255,255,255,0.9)'; for (const k of list) { if (!hit(rect, k.x - 90, k.y - 40, k.x + 90, k.y + 20)) continue; c.beginPath(); circ(c, k.x, k.y, 24 * k.s); circ(c, k.x + 26 * k.s, k.y + 6, 18 * k.s); circ(c, k.x - 26 * k.s, k.y + 6, 17 * k.s); ell(c, k.x, k.y + 10, 52 * k.s, 12 * k.s); c.fill(); } }
+  // a lighter/darker lane on the ground whose sides fade in over `fade` world units (no hard seam at scan zoom)
+  function softLane(c, rect, x0, x1, y0, rgb, fade) {
+    const ya = Math.max(y0, rect[1]), yb = rect[3]; if (yb <= ya || x1 < rect[0] || x0 > rect[2]) return;
+    const g = c.createLinearGradient(x0, 0, x1, 0), f = fade / (x1 - x0), solid = 'rgb(' + rgb + ')', clear = 'rgba(' + rgb + ',0)';
+    g.addColorStop(0, clear); g.addColorStop(f, solid); g.addColorStop(1 - f, solid); g.addColorStop(1, clear);
+    c.fillStyle = g; c.fillRect(Math.max(rect[0], x0), ya, Math.min(rect[2], x1) - Math.max(rect[0], x0), yb - ya);
+  }
   function speckle(c, rect, seed, n, cols, size, mode) {
     // deterministic texture marks per 200-unit cell, only cells touching the rect
     const cs = 200;
@@ -129,7 +136,7 @@
       // pavers
       if (hit(rect, 0, 560, W, H)) {
         c.fillStyle = '#ddb39a'; c.fillRect(rect[0], Math.max(560, rect[1]), rect[2] - rect[0], rect[3] - Math.max(560, rect[1]));
-        c.fillStyle = '#e8cbb5'; c.fillRect(Math.max(rect[0], 780), Math.max(560, rect[1]), Math.min(rect[2], 1220) - Math.max(rect[0], 780), rect[3] - Math.max(560, rect[1]));
+        softLane(c, rect, 760, 1240, 560, '232,203,181', 40); // the mall's lighter centre, edges faded
         c.strokeStyle = 'rgba(150,90,70,0.35)'; c.lineWidth = 1.2;
         const y0 = Math.max(560, Math.floor(rect[1] / 16) * 16), y1 = rect[3];
         c.beginPath();
@@ -423,10 +430,10 @@
       if (hit(rect, 0, 600, W, H)) {
         const y0 = Math.max(600, rect[1]);
         c.fillStyle = '#a7b6dc'; c.fillRect(rect[0], y0, rect[2] - rect[0], rect[3] - y0);
-        c.fillStyle = '#8f9ecb'; c.fillRect(Math.max(rect[0], 680), y0, Math.max(0, Math.min(rect[2], 1320) - Math.max(rect[0], 680)), rect[3] - y0);
-        c.strokeStyle = 'rgba(70,85,140,0.45)'; c.lineWidth = 6;
+        softLane(c, rect, 660, 1340, 600, '143,158,203', 40); // the parade route, edges faded
+        c.strokeStyle = 'rgba(70,85,140,0.2)'; c.lineWidth = 5; // tyre tracks: half the old contrast
         for (const x of [820, 870, 1130, 1180]) if (x > rect[0] - 10 && x < rect[2] + 10) { c.beginPath(); c.moveTo(x, y0); c.lineTo(x, rect[3]); c.stroke(); }
-        speckle(c, rect, P.seed, 18, ['rgba(255,255,255,0.75)', 'rgba(70,90,150,0.3)'], 5);
+        speckle(c, rect, P.seed, 14, ['rgba(255,255,255,0.32)', 'rgba(70,90,150,0.18)'], 3.5); // calm: ground sparkle must not read as falling snow or small finds
         c.fillStyle = 'rgba(20,20,60,0.15)'; if (hit(rect, 0, 600, W, 640)) c.fillRect(rect[0], 600, rect[2] - rect[0], 30);
       }
     },
@@ -458,7 +465,7 @@
         for (let y = 760; y < 2340; y += r.range(260, 340)) {
           const x = side ? r.range(1480, 1920) : r.range(80, 520), k = r.pick(['pine', 'lamp', 'stand', 'inflatables', 'pine', 'lamp']);
           if (k === 'pine') { const p = api.prop('pine', x, y, { k: r.range(0.9, 1.15) }, { foot: [24, 10] }); S.lights.push({ x, y: y - 50 * p.s, r: 70 * p.s, col: '#ffe0a0' }); S.chuckSpots.push(() => chuckNear(api, p, r.pick([-1, 1]), true)); }
-          else if (k === 'lamp') { const l = api.prop('lamp', x, y, { night: true, wreath: true }, { foot: [7, 5] }); S.lights.push({ x, y: y - 100 * l.s, r: 90 * l.s, col: '#ffe9a6' }); }
+          else if (k === 'lamp') { const l = api.prop('lamp', x, y, { night: true, wreath: true }, { foot: [7, 5] }); S.lights.push({ x, y: y - 100 * l.s, r: 90 * l.s, col: '#ffe9a6', kind: 'lamp' }); }
           else if (k === 'stand') { const st = api.stall(x, y, { w: 66, c1: r.pick(['#2a9d8f', '#7b6cf6', '#1982c4', '#e9a23b']), c2: '#f2efe4', goods: 'cocoa', sign: r.pick(['COCOA', 'CIDER', 'DONUTS']) }, SC.ART.randPerson(r, 'winter', { kid: false, armAnim: 'wave', hold: 'none' })); S.lights.push({ x, y: y - 40 * st.s, r: 80 * st.s, col: '#ffd59a' }); pushSpot(S, 'stall', () => champOn(api, st.x + r.range(-14, 14) * st.s, st.y - 20 * st.s, st.y + 0.5, 'peek')); }
           else { const ks = ['snowman', 'penguin', 'tree']; for (let i = 0; i < 3; i++) { const ix = x + (i - 1) * 36 * api.scale(y), iy = y + (i % 2) * 10; const inf = api.prop('inflatable', ix, iy, { k: ks[i] }, { foot: [16, 8] }); if (i === 1) pushSpot(S, 'inflatables', () => champOn(api, inf.x + 26 * inf.s, inf.y - 0.5 * inf.s, inf.y + 0.5, 'peek')); } }
         }

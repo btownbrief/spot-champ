@@ -45,7 +45,7 @@
     <div class="grow"></div>
     <div class="panel">
       <button id="btnDaily" class="big"><span>DAILY SCENE</span><small id="dailyInfo">today</small></button>
-      <div class="row"><button id="btnFree" class="mid">FREE PLAY</button><button id="btnRush" class="mid">RUSH <small id="rushBest">90 seconds</small></button></div>
+      <div class="row"><button id="btnFree" class="mid">FREE PLAY</button><button id="btnRush" class="mid">RUSH <small id="rushBest">beat the clock</small></button></div>
       <button id="btnAlbum" class="mid">CHAMP ALBUM <small id="albumCount"></small></button>
       <div class="rank" id="rankBox"><b id="rankName">Rookie Spotter</b><span id="rankXp"></span><i><em id="rankBar"></em></i></div>
       <div class="toggles" id="togglesTitle"></div>
@@ -111,9 +111,9 @@
 
   <div id="coach" class="ui" hidden>
     <div class="hand"><i class="f1"></i><i class="f2"></i></div>
-    <p>Pinch to zoom &middot; drag to look around<br><b>Tap</b> each thing on the list when you spot it</p>
+    <p>Pinch to zoom &middot; <b>tap</b> what&rsquo;s on the list</p>
   </div>
-  <div id="veil" class="ui"><div class="spin"></div><p id="veilText">Gathering the crowd&hellip;</p></div>
+  <div id="veil" class="ui"><div class="spin"></div><p id="veilText">Gathering the crowd&hellip;</p><h2 id="veilHead"></h2><p id="veilSub"></p></div>
 </div>
 <div id="probe"></div>
 <script>window.addEventListener('error', function (e) { if (/spot|js\//i.test(e.filename || '') || !window.SC || !window.SC.SCENE) { var t = document.getElementById('veilText'); if (t && !window.__booted) { t.innerHTML = 'Something didn\u2019t load. <u>Tap to reload</u>'; document.getElementById('veil').style.pointerEvents = 'auto'; document.getElementById('veil').onclick = function () { location.reload(); }; } } }, true);</script>

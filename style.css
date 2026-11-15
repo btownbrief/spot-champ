@@ -50,8 +50,9 @@ button { font-family: var(--ui); border: 0; cursor: pointer; touch-action: manip
 @keyframes cardpulse { 0%,100% { transform: scale(1) } 40% { transform: scale(1.25) rotate(-6deg) } }
 @keyframes pop { from { transform: scale(0) } to { transform: scale(1) } }
 
-#toast { position: absolute; left: 50%; top: calc(var(--sat) + 66px); transform: translate(-50%, -20px) scale(0.8); opacity: 0; padding: 8px 16px 6px; border-radius: 999px; background: var(--sun); color: var(--ink); font: 20px/1 var(--disp); letter-spacing: 0.5px; border: 3px solid var(--ink); white-space: nowrap; transition: transform .3s cubic-bezier(.3,1.6,.5,1), opacity .25s; pointer-events: none; }
+#toast { position: absolute; left: 50%; top: calc(var(--sat) + 66px); transform: translate(-50%, -20px) scale(0.8); opacity: 0; padding: 8px 16px 6px; border-radius: 999px; background: var(--sun); color: var(--ink); font: 17px/1.15 var(--disp); letter-spacing: 0.5px; border: 3px solid var(--ink); white-space: normal; width: max-content; max-width: calc(100% - 24px); text-align: center; transition: transform .3s cubic-bezier(.3,1.6,.5,1), opacity .25s; pointer-events: none; }
 #toast.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
+body.combo #toast { top: calc(var(--sat) + 96px); } /* Rush: never on top of the combo pill */
 #toast.bad { background: var(--coral); color: var(--cream); }
 #callout { position: absolute; left: 50%; bottom: calc(var(--trayH, 80px) + 66px); transform: translateX(-50%); width: min(92vw, 380px); display: flex; gap: 10px; align-items: center; padding: 8px 12px 8px 8px; border-radius: 16px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 4px 0 rgba(0,0,0,0.3); pointer-events: none; animation: rise .3s cubic-bezier(.3,1.5,.5,1); }
 #callout canvas { width: 56px; height: 56px; flex: none; background: #fff; border-radius: 10px; }
@@ -104,20 +105,21 @@ button { font-family: var(--ui); border: 0; cursor: pointer; touch-action: manip
 .newbest { text-align: center; font-weight: 700; color: var(--sun); min-height: 20px; }
 .stats { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-weight: 600; font-size: 15px; background: rgba(255,248,230,0.08); border-radius: 12px; padding: 8px 12px; }
 .stats b { text-align: right; }
-#done { justify-content: flex-end; background: linear-gradient(rgba(24,16,40,0), rgba(24,16,40,0.65) 60%); }
+#done { justify-content: flex-end; background: none; } /* the reveal map stays bright; the card is opaque */
+body.results #tray, body.results .side { visibility: hidden; }
 #done .card { gap: 7px; padding: 14px 14px 14px; }
 #done .card h2 { font-size: 30px; }
 #done .stats { grid-template-columns: 1fr auto 1fr auto; font-size: 14px; }
 .stars { font-size: 34px; }
 
-#coach { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(86vw, 320px); text-align: center; padding: 18px 16px 14px; border-radius: 20px; background: rgba(36,26,56,0.88); border: 3px solid var(--cream); pointer-events: none; animation: cardin .4s cubic-bezier(.3,1.5,.5,1); }
-#coach p { margin: 8px 0 0; font-weight: 600; font-size: 16px; line-height: 1.35; }
+#coach { position: absolute; left: 50%; bottom: calc(var(--trayH, 80px) + 64px); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100% - 24px); padding: 6px 14px 6px 8px; border-radius: 999px; background: rgba(36,26,56,0.9); border: 2px solid rgba(255,248,230,0.7); pointer-events: none; animation: rise .35s cubic-bezier(.3,1.5,.5,1); white-space: nowrap; }
+#coach p { margin: 0; font-weight: 600; font-size: 15px; line-height: 1.2; }
 #coach b { color: var(--sun); }
-.hand { position: relative; height: 70px; }
-.hand i { position: absolute; top: 24px; left: 50%; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: rgba(255,248,230,0.9); box-shadow: 0 0 0 6px rgba(255,248,230,0.25); }
+.hand { position: relative; width: 34px; height: 30px; flex: none; }
+.hand i { position: absolute; top: 9px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: rgba(255,248,230,0.9); box-shadow: 0 0 0 3px rgba(255,248,230,0.25); }
 .hand .f1 { animation: f1 1.6s ease-in-out infinite; } .hand .f2 { animation: f2 1.6s ease-in-out infinite; }
-@keyframes f1 { 0%,15% { transform: translate(-10px, 8px) } 60%,100% { transform: translate(-46px, -14px) } }
-@keyframes f2 { 0%,15% { transform: translate(10px, -8px) } 60%,100% { transform: translate(46px, 14px) } }
+@keyframes f1 { 0%,15% { transform: translate(-3px, 2px) } 60%,100% { transform: translate(-12px, -5px) } }
+@keyframes f2 { 0%,15% { transform: translate(3px, -2px) } 60%,100% { transform: translate(12px, 5px) } }
 
 #veil { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; background: var(--plum); transition: opacity .35s; pointer-events: none; opacity: 1; }
 #veil.off { opacity: 0; }
@@ -135,7 +137,7 @@ button { font-family: var(--ui); border: 0; cursor: pointer; touch-action: manip
   .card { padding: 12px; gap: 7px; } .bigtime { font-size: 44px; } .stars { font-size: 30px; }
 }
 @media (orientation: landscape) {
-  #done { align-items: flex-end; justify-content: center; padding-top: calc(var(--sat) + 64px); background: linear-gradient(90deg, rgba(24,16,40,0), rgba(24,16,40,0.6) 60%); }
+  #done { align-items: flex-end; justify-content: center; padding-top: calc(var(--sat) + 64px); background: none; }
 }
 
 /* ---------- round 2: combo, ranks, album ---------- */
@@ -179,7 +181,6 @@ button { font-family: var(--ui); border: 0; cursor: pointer; touch-action: manip
   #callout { width: min(46vw, 340px); left: calc(var(--sal) + 12px); transform: none; animation: none; }
 }
 #timer.low { background: var(--coral); animation: tshake .5s infinite; }
-.rib.lost { text-decoration: line-through; opacity: 0.45; border-style: solid; }
 /* compact results card in portrait so the reveal keeps most of the screen */
 @media (orientation: portrait) {
   #done .card { gap: 6px; padding: 12px 14px 12px; }
@@ -187,4 +188,19 @@ button { font-family: var(--ui); border: 0; cursor: pointer; touch-action: manip
   #done .newbest { min-height: 0; font-size: 13px; } #done .stats { font-size: 13px; padding: 6px 10px; }
   #done .extra { font-size: 12.5px; line-height: 1.3; } #done .ribs { margin: 0; }
   #done .big { min-height: 52px; font-size: 24px; } #done .mid { min-height: 42px; font-size: 18px; }
+}
+
+/* ---------- 2026-11-15 upgrade ---------- */
+#veil h2, #veil #veilSub { display: none; margin: 0; text-align: center; }
+#veil.scenecard .spin, #veil.scenecard #veilText { display: none; }
+#veil.scenecard h2 { display: block; font: 54px/1 var(--disp); letter-spacing: 2px; color: var(--sun); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; animation: cardin .35s cubic-bezier(.3,1.5,.5,1); }
+#veil.scenecard #veilSub { display: block; font-weight: 600; font-size: 16px; margin-top: 10px; opacity: 0.9; }
+#btnHint.nudge { animation: nudge .6s ease-in-out 5; }
+@keyframes nudge { 0%,100% { transform: scale(1) } 50% { transform: scale(1.18); box-shadow: 0 0 0 8px rgba(23,179,163,0.35), 0 3px 0 rgba(0,0,0,0.35) } }
+.bigtime small.streak { display: inline-block; vertical-align: middle; margin-left: 10px; font: 600 15px/1 var(--ui); letter-spacing: 0; color: var(--sun); background: rgba(255,210,63,0.14); border-radius: 999px; padding: 5px 9px; transform: translateY(-6px); }
+.extra .foot { margin-top: 2px; font-size: 13px; opacity: 0.9; }
+#done .ribs { margin: 0; }
+@media (orientation: portrait) {
+  #done .card { gap: 4px; }
+  #done .card h2 { font-size: 25px; } #done .stars { font-size: 25px; }
 }

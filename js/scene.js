@@ -7,10 +7,26 @@
   const W = 2000, H = 2400;
 
   const DIFF = {
-    easy: { crowd: 185, cover: 0.2, peepDecoys: 2, champDecoys: 1, chuckDecoys: 1, peek: 0, label: 'Easy' },
-    normal: { crowd: 360, cover: 0.3, peepDecoys: 3, champDecoys: 2, chuckDecoys: 2, peek: 0.3, label: 'Normal' },
-    hard: { crowd: 440, cover: 0.4, peepDecoys: 5, champDecoys: 3, chuckDecoys: 3, peek: 0.8, label: 'Hard' },
+    // tuck: share of targets that get a crowd member standing in front of their lower half, and the pixel-coverage band they land in
+    easy: { crowd: 185, cover: 0.2, peepDecoys: 2, champDecoys: 1, chuckDecoys: 1, peek: 0, label: 'Easy', tuck: 0, pband: [0, 0], near: 0 },
+    normal: { crowd: 360, cover: 0.3, peepDecoys: 3, champDecoys: 2, chuckDecoys: 2, peek: 1, champNear: 3, label: 'Normal', tuck: 0.5, pband: [0.17, 0.26], near: 0 },
+    hard: { crowd: 440, cover: 0.4, peepDecoys: 5, champDecoys: 3, chuckDecoys: 3, peek: 1, champNear: 3, label: 'Hard', tuck: 0.8, pband: [0.25, 0.37], near: 3 },
   };
+  // Rush: a ladder of scenes that gets harder. n = list length, gain = seconds added per find before the combo bonus,
+  // cap = most the combo can add per find, clear = seconds for clearing the scene.
+  // Tuned with tools/rush-sim.js (a bot, no misses): one find every 7 s sees a red clock (< 10 s) by 2:00 and dies in
+  // scene 4 at 2.5-3 min; every 12 s dies in 60-75 s; every 4 s ends within 6 min (the squeeze from scene 6).
+  const RUSH = {
+    start: 45000, miss: 4000, hint: 8000, comboWindow: 10000, comboStep: 1000,
+    level(n) {
+      if (n <= 1) return { n: 5, diff: 'easy', gain: 4000, cap: 2000, clear: 6000 };
+      if (n === 2) return { n: 6, diff: 'normal', gain: 2500, cap: 2000, clear: 6000 };
+      if (n === 3) return { n: 7, diff: 'normal', gain: 2500, cap: 2000, clear: 6000 };
+      if (n <= 5) return { n: 8, diff: 'hard', gain: 2000, cap: 2000, clear: 6000 };
+      return { n: 8, diff: 'hard', gain: 500, cap: 1500, clear: 4000 }; // the squeeze: an expert run still ends
+    },
+  };
+  const SMALL = ['jug', 'duck', 'mitten', 'kite', 'skateboard', 'snowman', 'pumpkin', 'flamingo', 'trophy'];
 
   // what the player hunts for
   const TARGETS = {
@@ -83,7 +99,7 @@
   const overlap = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
 
   // fraction of the target's own shape covered by things drawn in front of it
-  function coverage(S, t, detail) {
+  function coverage(S, t, detail, opad) {
     const bx = shapesBox(t), step = Math.max(0.6, Math.min(bx[2] - bx[0], bx[3] - bx[1]) / 16);
     const occ = [];
     for (const e of S.ents) if (!e.dead && e !== t && after(e, t) && !e.noHit && overlap(e.box, bx)) occ.push(e);
@@ -91,7 +107,7 @@
     for (let y = bx[1] + step / 2; y < bx[3]; y += step) for (let x = bx[0] + step / 2; x < bx[2]; x += step) {
       if (!inShapes(t, x, y)) continue;
       tot++;
-      for (const o of occ) if (inShapes(o, x, y, 2 * o.s)) { cov++; if (detail) by.set(o, (by.get(o) || 0) + 1); break; }
+      for (const o of occ) if (inShapes(o, x, y, (opad || 2) * o.s)) { cov++; if (detail) by.set(o, (by.get(o) || 0) + 1); break; }
     }
     const f = tot ? cov / tot : 1;
     return detail ? { f, by, tot } : f;
@@ -224,6 +240,10 @@
       else if (id === 'pumpkin') d = { kind: 'item', spec: { item: 'pumpkin' }, foot: [9, 5] };
       else if (id === 'duck') d = { kind: 'item', spec: { item: 'duck', col: '#ff9fc5' }, foot: [8, 5] };
       else if (id === 'snowman') d = { kind: 'item', spec: { item: 'snowman', col: '#e63946' }, foot: [9, 5] };
+      else if (id === 'jug') d = { kind: 'item', spec: { item: 'jug', col: '#f2f2f2' }, foot: [9, 5] }; // a milk jug
+      else if (id === 'kite') d = { kind: 'item', spec: { item: 'kite', cols: ['#4d96ff', '#ffffff', '#4d96ff', '#ffffff'] }, foot: [12, 5] };
+      else if (id === 'flamingo') d = { kind: 'item', spec: { item: 'flamingo', col: '#9ad0ec' }, foot: [8, 5] };
+      else if (id === 'trophy') d = { kind: 'item', spec: { item: 'trophy', col: '#c9ced6' }, foot: [8, 5] };
       if (d) out.push(d);
     }
     return out;
@@ -247,6 +267,114 @@
       return p;
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------- hiding helpers
+  function zoneAt(S, x, y, water) {
+    let best = null;
+    for (const z of S.zones) if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1 && (!z.test || z.test(x, y))) {
+      if (!!z.water !== !!water) continue;
+      if (!best || (best.road && !z.road)) best = z;
+    }
+    return best;
+  }
+  // nobody else is standing on this spot, and it's not inside a prop's footprint
+  function footFree(S, x, y, s) {
+    if (x < 30 || x > W - 30 || y > H - 14 || y < S.gy0 + 6) return false;
+    for (const e of S.ents) {
+      if (e.dead || e.noHit) continue;
+      if (e.role === 'prop') { const b = e.box; if (x > b[0] - 4 && x < b[2] + 4 && y > e.y - 22 * e.s && y < e.y + 7 * e.s) return false; continue; }
+      if (Math.abs(e.x - x) < 12 * s && Math.abs(e.y - y) < 6 * s) return false;
+    }
+    return true;
+  }
+  // sample points that must stay uncovered: a person's top 40% (head and hat), a critter's head; small things have no face
+  function topPoints(e) {
+    const out = [];
+    if (e.kind === 'person') {
+      const b = shapesBox(e), w = b[2] - b[0], h = b[3] - b[1];
+      for (let y = b[1] + h * 0.03; y < b[1] + h * 0.4; y += Math.max(0.7, h / 24)) for (let x = b[0]; x <= b[2]; x += Math.max(0.7, w / 14)) if (inShapes(e, x, y)) out.push([x, y]);
+    } else if (e.kind === 'dog' || e.kind === 'woodchuck' || e.kind === 'champ') {
+      const q = worldShapes(e)[e.kind === 'champ' ? 0 : 1];
+      for (let k = 0; k < 24; k++) { const a = k * 2.4, rr = Math.sqrt((k + 0.5) / 24); out.push([q.x + Math.cos(a) * q.rx * rr, q.y + Math.sin(a) * q.ry * rr]); }
+    }
+    return out;
+  }
+  // try a crowd member at (x, y); keep it only if `ok(o)` passes, else it never existed
+  function tryMember(api, S, T, x, y, water, ok, low) {
+    const z = zoneAt(S, x, y, water); if (!z) return null;
+    const s = scaleAt(S, y); if (!footFree(S, x, y, s)) return null;
+    const r = api.r;
+    // small things hide best behind something small: a dog or a kid
+    const m = low && !water ? (r.chance(0.5) ? { kind: 'dog', spec: SC.ART.randDog(r), banim: 'bob' } : { kind: 'person', spec: SC.ART.randPerson(r, S.theme, { kid: true, balloon: false }), banim: 'bob' }) : T.crowd(r, S, z);
+    if (m.kind === 'prop') return null;
+    const o = api.add(m.kind, m.spec, x, y, { banim: m.banim, flip: m.flip != null ? m.flip : r.chance(0.5), role: 'crowd' });
+    if (ok(o)) return o;
+    o.dead = true; return null;
+  }
+
+  // ---- how covered is a target? In a browser we measure real pixels (draw it, punch out everything drawn in front);
+  // in node (tests) there is no canvas, so we estimate pixels from hit shapes (measured in Chromium: pixels ~ 0.68 x shape coverage).
+  let pxC = null;
+  const canPx = () => typeof document !== 'undefined' && !!document.createElement;
+  function pixelCoverage(S, e) {
+    const b = e.box, sc = 2, pad = 2, w = Math.ceil((b[2] - b[0]) * sc) + pad * 2, h = Math.ceil((b[3] - b[1]) * sc) + pad * 2;
+    if (!pxC) pxC = document.createElement('canvas');
+    if (pxC.width < w || pxC.height < h) { pxC.width = Math.max(pxC.width, w); pxC.height = Math.max(pxC.height, h); pxC.g = null; }
+    const g = pxC.g || (pxC.g = pxC.getContext('2d', { willReadFrequently: true }));
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h);
+    const put = (o) => { const f = o.flip ? -1 : 1; for (const p of o.parts) { g.setTransform(sc * o.s * f, 0, 0, sc * o.s, (o.x - b[0]) * sc + pad, (o.y - b[1]) * sc + pad); SC.KINDS[o.kind].draw(g, o.spec, p.name); } };
+    const count = () => { const d = g.getImageData(0, 0, w, h).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 60) n++; return n; };
+    put(e); const before = count();
+    g.globalCompositeOperation = 'destination-out';
+    for (const o of S.ents) { if (o === e || o.dead || o.noHit || !after(o, e)) continue; const ob = o.box; if (ob[0] > b[2] || ob[2] < b[0] || ob[1] > b[3] || ob[3] < b[1]) continue; put(o); }
+    g.globalCompositeOperation = 'source-over';
+    const after_ = count();
+    return before ? 1 - after_ / before : 1;
+  }
+  const PX_PER_SHAPE = 0.68;
+  const measure = (S, e) => canPx() ? pixelCoverage(S, e) : PX_PER_SHAPE * coverage(S, e);
+  // the most a target may be covered when we add someone near it (in pixels, just under the difficulty's limit)
+  const ceil = (S) => DIFF[S.diff].cover - 0.02;
+  function measureWithout(S, u, o) { o.dead = true; const c = measure(S, u); o.dead = false; return c; }
+  function shapeWithout(S, u, o) { o.dead = true; const c = coverage(S, u); o.dead = false; return c; }
+  // cheap first: if the newcomer doesn't touch the target's hit shapes it barely changes its pixels either
+  const touches = (S, u, o) => coverage(S, u) > shapeWithout(S, u, o) + 1e-9;
+  // every target's shape coverage must also stay under SCENE.check's ceiling
+  const shapeOk = (S, u) => coverage(S, u) <= DIFF[S.diff].cover;
+  // a new crowd member must not push any other target over its ceiling (one already over it must not get worse)
+  const othersOk = (S, o, placed, self) => placed.every(u => { if (u === o || u === self || !after(o, u) || !overlap(o.box, u.box) || !touches(S, u, o)) return true; if (!shapeOk(S, u)) return false; const c = measure(S, u); return c <= ceil(S, u) || c <= measureWithout(S, u, o) + 1e-9; });
+  function tuck(api, S, T, e, lo, hi, placed) {
+    const r = api.r, b = shapesBox(e), w = b[2] - b[0], h = b[3] - b[1], top = topPoints(e);
+    const water = !!(zoneAt(S, e.x, e.y, true) && !zoneAt(S, e.x, e.y, false));
+    for (let k = 0; k < 60; k++) {
+      const x = e.x + r.range(-0.8, 0.8) * Math.max(w, 18 * e.s), y = e.y + 2 * e.s + r.range(0.1, 0.6) * h;
+      const o = tryMember(api, S, T, x, y, water, (o) => {
+        if (top.some(p => inShapes(o, p[0], p[1], 2 * o.s)) || !shapeOk(S, e)) return false;
+        const est = PX_PER_SHAPE * coverage(S, e); if (est < lo * 0.45 || est > hi * 1.8) return false; // clearly outside the band: skip the pixel count
+        const c = measure(S, e);
+        return c >= lo && c <= hi && othersOk(S, o, placed, e);
+      }, h < 42 * e.s && r.chance(0.7));
+      if (o) { o.tuck = true; return o; }
+    }
+    return null;
+  }
+  // at least `n` crowd members within 60 units, so no target stands alone on open ground
+  function company(api, S, T, e, n, placed) {
+    const r = api.r, top = topPoints(e);
+    const water = !!(zoneAt(S, e.x, e.y, true) && !zoneAt(S, e.x, e.y, false));
+    const count = () => { let c = 0; for (const o of S.ents) if (!o.dead && o.role === 'crowd' && Math.hypot(o.x - e.x, o.y - e.y) < 60) c++; return c; };
+    let have = count();
+    for (let k = 0; k < 90 && have < n; k++) {
+      const a = r.range(0, Math.PI * 2), d = r.range(24, 56), x = e.x + Math.cos(a) * d, y = e.y + Math.sin(a) * d * 0.7;
+      const ok = (o) => {
+        if (top.some(p => inShapes(o, p[0], p[1], 2 * o.s)) || !othersOk(S, o, placed, e)) return false;
+        if (!after(o, e) || !overlap(o.box, e.box) || !touches(S, e, o)) return true; // behind it, or not touching: can't cover it
+        if (!shapeOk(S, e)) return false;
+        const c = measure(S, e); return c <= ceil(S, e) || c <= measureWithout(S, e, o) + 1e-9;
+      };
+      if (tryMember(api, S, T, x, y, water, ok)) have++;
+    }
   }
 
   // ---------------------------------------------------------------- main
@@ -273,14 +401,17 @@
     }
 
     // --- choose this scene's list: Champ, woodchuck, peeper + 5 rotating extras
-    const extras = r.shuffle(EXTRAS[theme].slice()).slice(0, 5);
+    const extras = r.shuffle(EXTRAS[theme].slice()).slice(0, opts.extras != null ? opts.extras : 5);
+    S.want = 3 + extras.length;
     const list = ['champ', 'woodchuck', 'peeper'].concat(extras);
     const placed = [];
 
     // Champ: always at a themed hiding spot (fountain, pool, behind a counter, over a snowbank...)
     {
       // pick a kind of hiding place first (so rare ones like the pool or a parade float come up), then one of that kind
-      const kinds = Array.from(new Set(S.champSpots.map(f => f.kind)));
+      // Normal skips the open kiddie pool (he'd be the only thing in it); Normal and Hard always use the low peek pose
+      let kinds = Array.from(new Set(S.champSpots.map(f => f.kind)));
+      if (diff === 'normal' && kinds.length > 1) kinds = kinds.filter(k => k !== 'pool');
       const kind = r.pick(kinds), spot = r.pick(S.champSpots.filter(f => f.kind === kind));
       const e = spot(r.chance(D.peek) ? 'peek' : 'neck');
       e.role = 'target'; e.tid = 'champ'; e.spotKind = spot.kind || 'stall'; placed.push(e);
@@ -314,7 +445,8 @@
     const decoys = [];
     const nDec = { peeper: D.peepDecoys, champ: D.champDecoys, woodchuck: D.chuckDecoys };
     for (const id of list) {
-      const n = nDec[id] != null ? nDec[id] : (['mitten', 'skateboard', 'pumpkin', 'snowman', 'duck'].includes(id) ? (diff === 'easy' ? 0 : 1) : 0);
+      // small things get one lookalike (Normal: the classic ones; Hard: every small thing)
+      const n = nDec[id] != null ? nDec[id] : diff === 'hard' && SMALL.includes(id) ? 1 : (['mitten', 'skateboard', 'pumpkin', 'snowman', 'duck'].includes(id) ? (diff === 'easy' ? 0 : 1) : 0);
       for (const d of decoySpecs(id, r, theme, n)) {
         const tgt = placed.find(p => p.tid === id);
         let p = null;
@@ -343,7 +475,25 @@
 
     // --- fairness: keep every target mostly visible by moving crowd members out of the way
     const limit = D.cover - 0.07; // aim under the rule: hit shapes are an approximation of the drawn pixels
-    for (const t of placed) clearAround(S, t, limit);
+    for (const t of placed) clearAround(S, t, limit - (t.kind === 'person' || t.kind === 'champ' ? 0 : 0.03));
+    // --- hiding: tuck a crowd member in front of the lower half of some targets (head / face always stays clear)
+    if (D.tuck) {
+      // band in pixels (browser); the node estimate uses shapes, which read higher for people and lower for small things
+      const band = D.pband, cand = r.shuffle(placed.filter(e => e.role === 'target'));
+      const lo = () => band[0], hi = () => band[1];
+      let need = Math.round((S.want) * D.tuck);
+      const cov0 = new Map(cand.map(e => [e, measure(S, e)]));
+      for (const e of cand) if (cov0.get(e) >= lo(e)) need--;
+      for (const e of cand) {
+        if (need <= 0) break;
+        if (e.tid === 'champ' || cov0.get(e) >= lo(e)) continue; // Champ already hides at his prop
+        if (tuck(api, S, T, e, lo(e), hi(e), placed)) need--;
+      }
+    }
+    // Hard: nothing stands alone on open ground
+    if (D.near) for (const e of placed) if (e.role === 'target') company(api, S, T, e, D.near, placed);
+    // Normal and Hard: Champ hides in a crowd, never alone on an open snowbank or pool
+    if (D.champNear) { const ch = placed.find(e => e.tid === 'champ'); if (ch) company(api, S, T, ch, D.champNear, placed); }
     // decoys must not sit right on top of their target (taps stay unambiguous)
     for (const d of decoys) { const t = placed.find(p => p.tid === d.decoyOf); if (t && Math.hypot(t.x - d.x, t.y - d.y) < 90) d.dead = true; }
     // other targets must not overlap each other heavily
@@ -352,7 +502,7 @@
     S.order = S.ents;
     S.targets = list.map(id => { const e = placed.find(p => p.tid === id); return e ? { id, name: TARGETS[id].name, blurb: TARGETS[id].blurb, e, found: false } : null; }).filter(Boolean);
     S.decoys = decoys.filter(d => !d.dead);
-    for (const e of S.ents) if (e.spec && e.spec.hold === 'lantern' && S.night) S.lights.push({ x: e.x + (e.flip ? -1 : 1) * 8 * e.s, y: e.y - 18 * e.s, r: 34 * e.s, col: e.spec.lanc || '#ffd166', ent: e });
+    for (const e of S.ents) if (e.spec && e.spec.hold === 'lantern' && S.night) S.lights.push({ x: e.x + (e.flip ? -1 : 1) * 8 * e.s, y: e.y - 18 * e.s, r: 34 * e.s, col: e.spec.lanc || '#ffd166', ent: e, kind: 'lantern' });
     return S;
   }
 
@@ -365,16 +515,20 @@
       if (b[0] < 20 || b[2] > W - 20 || b[1] < 20 || b[3] > H - 5) issues.push(t.id + ': outside bounds ' + b.map(v => v | 0).join(','));
       const cov = coverage(S, e);
       if (cov > D.cover + 0.02) issues.push(t.id + ': covered ' + Math.round(cov * 100) + '%');
+      if (canPx() && cov > 0.08) { const pc = pixelCoverage(S, e); if (pc > D.cover + 0.03) issues.push(t.id + ': pixel-covered ' + Math.round(pc * 100) + '%'); } // barely touched by shapes = barely covered
       const size = Math.max(b[2] - b[0], b[3] - b[1]);
       if (size < 12) issues.push(t.id + ': too small ' + size.toFixed(1));
       for (const u of S.targets) if (u !== t && Math.hypot(u.e.x - e.x, u.e.y - e.y) < 30) issues.push(t.id + ': overlaps ' + u.id);
       for (const d of S.decoys) if (d.decoyOf === t.id && Math.hypot(d.x - e.x, d.y - e.y) < 90) issues.push(t.id + ': decoy too close');
     }
-    if (S.targets.length !== 8) issues.push('target count ' + S.targets.length);
+    if (S.targets.length !== (S.want || 8)) issues.push('target count ' + S.targets.length);
+    // Normal / Hard: Champ hides in company (3+ crowd within 60), never alone on an open snowbank or pool
+    const ch = D.champNear && S.targets.find(t => t.id === 'champ');
+    if (ch) { let n = 0; for (const o of S.ents) if (o.role === 'crowd' && !o.dead && Math.hypot(o.x - ch.e.x, o.y - ch.e.y) < 60) n++; if (n < D.champNear) issues.push('champ: alone (' + n + ' near)'); }
     if (S.bonus) { const cov = coverage(S, S.bonus); if (cov > D.cover + 0.02) issues.push('goldleaf: covered ' + Math.round(cov * 100) + '%'); }
     return issues;
   }
 
   const SPOTS = { stall: 'Peeking over a stall counter', fountain: 'Splashing in the fountain', pool: 'Among the pool floats', hay: 'Behind a hay bale', pumpkins: 'Behind the pumpkin pile', tub: 'In the apple-bobbing tub', lake: 'Swimming with the swimmers', sandcastle: 'Behind a sandcastle', table: 'Behind a water table', portajohn: 'On top of the porta-johns', snowbank: 'Over a snowbank', float: 'Riding a parade float', inflatables: 'Hiding with the yard inflatables' };
-  SC.SCENE = { SPOTS, make, check, coverage, worldShapes, inShapes, shapesBox, scaleAt, W, H, DIFF, TARGETS, EXTRAS, makeTargetSpec };
+  SC.SCENE = { SPOTS, make, check, coverage, pixelCoverage, worldShapes, inShapes, shapesBox, scaleAt, W, H, DIFF, TARGETS, EXTRAS, makeTargetSpec, RUSH, SMALL };
 })(typeof window !== 'undefined' ? window : globalThis);
