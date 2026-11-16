@@ -66,9 +66,11 @@ body.combo #toast { top: calc(var(--sat) + 96px); } /* Rush: never on top of the
 #title { background: linear-gradient(rgba(36,26,56,0.15), rgba(36,26,56,0.0) 40%, rgba(36,26,56,0.75)); }
 .logo { margin-top: 4vh; text-align: center; font-family: var(--disp); line-height: 0.86; transform: rotate(-4deg); filter: drop-shadow(0 6px 0 rgba(0,0,0,0.35)); animation: logoin .7s cubic-bezier(.3,1.5,.5,1); }
 @keyframes logoin { from { transform: rotate(-4deg) scale(0.5); opacity: 0 } }
-.logo .l1 { font-size: 78px; color: var(--sun); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; letter-spacing: 3px; }
+.logo .l1 { font-size: 62px; color: var(--sun); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; letter-spacing: 3px; }
 .logo .l2 { font-size: 92px; color: var(--teal); -webkit-text-stroke: 3.5px var(--ink); paint-order: stroke fill; letter-spacing: 2px; }
 .logo .peek { position: relative; display: inline-block; }
+.logo .l2 { white-space: nowrap; }
+@media (max-width: 370px) { .logo .l1 { font-size: 52px; } .logo .l2 { font-size: 76px; } }
 .logo .peek canvas { position: absolute; width: 74px; height: 74px; left: 50%; top: -52px; transform: translateX(-50%); animation: bob 2.4s ease-in-out infinite; z-index: -1; }
 @keyframes bob { 0%,100% { transform: translate(-50%, 4px) } 50% { transform: translate(-50%, -4px) } }
 .tag { margin-top: 14px; padding: 6px 14px; border-radius: 999px; background: rgba(36,26,56,0.78); font-weight: 600; font-size: 15px; text-align: center; }
@@ -130,7 +132,7 @@ body.results #tray, body.results .side { visibility: hidden; }
 @media (orientation: landscape) and (max-height: 520px) {
   .tcard { max-width: 46px; border-radius: 10px; } .side { width: 46px; height: 46px; } #tray { padding-top: 4px; }
   #timer { font-size: 20px; padding: 6px 12px 4px; } .round { width: 40px; height: 40px; }
-  .logo { margin-top: 0; } .logo .l1 { font-size: 52px; } .logo .l2 { font-size: 60px; }
+  .logo { margin-top: 0; } .logo .l1 { font-size: 42px; } .logo .l2 { font-size: 60px; }
   .logo .peek canvas { width: 50px; height: 50px; top: -36px; }
   .tag { margin-top: 6px; font-size: 13px; }
   .big { min-height: 52px; font-size: 24px; } .mid { min-height: 44px; }
@@ -176,7 +178,7 @@ body.results #tray, body.results .side { visibility: hidden; }
   #done .newbest { min-height: 0; font-size: 12px; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
-  #title { padding-top: calc(var(--sat) + 6px); } #title .tag { display: none; } .logo .l1 { font-size: 40px; } .logo .l2 { font-size: 46px; }
+  #title { padding-top: calc(var(--sat) + 6px); } #title .tag { display: none; } .logo .l1 { font-size: 32px; } .logo .l2 { font-size: 46px; }
   #title .panel { gap: 6px; } #title .big { min-height: 44px; } #title .rank { padding: 4px 10px 6px; } #title .rank b { font-size: 14px; }
   #callout { width: min(46vw, 340px); left: calc(var(--sal) + 12px); transform: none; animation: none; }
 }

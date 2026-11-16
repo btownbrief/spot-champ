@@ -1,6 +1,6 @@
 {
-  "name": "Spot Champ",
-  "short_name": "Spot Champ",
+  "name": "Where’s Champ?",
+  "short_name": "Where’s Champ?",
   "description": "A find-them-in-the-crowd hidden-object game. Find Champ, a woodchuck and a very lost leaf peeper.",
   "start_url": "./index.html",
   "display": "standalone",

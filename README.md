@@ -1,6 +1,6 @@
-# Spot Champ
+# Where’s Champ?
 
-Spot Champ — a find-them-in-the-crowd hidden-object game. Find Champ, a woodchuck and a very lost leaf peeper in busy, lively crowds.
+Where’s Champ? — a find-them-in-the-crowd hidden-object game. Find Champ, a woodchuck and a very lost leaf peeper in busy, lively crowds.
 
 Play: https://play.btownbrief.com/spot-champ/
 
